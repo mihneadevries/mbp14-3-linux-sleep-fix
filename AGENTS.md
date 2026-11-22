@@ -9,8 +9,9 @@ You are helping someone fix suspend/resume on a 2016-2017 T1 MacBook Pro running
 3. **Don't hibernate to test anything.** Hibernate restore kills the Radeon (`SMU load firmware failed`, `-22`) and crashes the desktop session. `install.sh` disables it on purpose.
 4. **Don't use `pm_trace`.** The Mac firmware resets the RTC to 2024-01-01 on a forced power-off, so the trace is lost, and any "hash matches" line it prints is meaningless.
 5. **Don't send raw USB/HID commands to the T1 iBridge (`05ac:8600`)**, and don't use t1bridge's FRST/recovery. Raw commands can wedge the T1 until a full shutdown, and recovery mode can leave it in recovery.
-6. **Don't unload the Touch Bar modules (`apple_ib_tb`, `apple_ibridge`) inside a sleep hook.** On a test machine, that step was followed by a suspend that never came back.
-7. Disk encryption (LUKS) means the user must type a password at every boot. Plan reboots around that.
+6. **Avoid tests that end in a forced reset or power-button hold on this Mac.** They can leave the Wi-Fi card off at the next boot and, together with many quick reboots, the T1 refusing commands. If a test must hang, keep it to one run.
+7. **Don't unload the Touch Bar modules (`apple_ib_tb`, `apple_ibridge`) inside a sleep hook.** On a test machine, that step was followed by a suspend that never came back.
+8. Disk encryption (LUKS) means the user must type a password at every boot. Plan reboots around that.
 
 ## Fresh install or full setup
 
@@ -61,6 +62,7 @@ Ask the user whether the Touch Bar is lit and whether Wi-Fi reconnected.
 | Touch Bar dark at boot, 30 s black screen | `cat /sys/bus/usb/devices/1-3/bConfigurationValue` is empty: the usbmuxd rule unconfigured the T1. Check `/etc/udev/rules.d/39-usbmuxd.rules` exists. |
 | Touch Bar goes dark after ~5 min idle and won't wake | The driver's idle auto-off. Set `options apple-ib-tb fnmode=1 idle_timeout=-1 dim_timeout=-1` in `/etc/modprobe.d/apple-ib-tb.conf`, then do a full shutdown (not a reboot). |
 | Esc/touch works but the bar has no light; driver says `touch bar ready` (often after quick warm reboots; T1 may have shown up as `05ac:1281` recovery mode) | Don't experiment: have the user **shut down fully**, wait 30 s, then power on. The `SOCW` pair and driver reload don't fix this state. |
+| Bar dark **and** Esc dead; kernel log `tb: Failed to set touch bar mode ... (-32)` | T1 refusing commands. Don't send it anything. Have the user shut down, unplug the charger and leave it off 30+ minutes (see lessons-learned). An SMC reset and a normal shutdown don't fix it. |
 | Touch Bar dark even in macOS | Only then suspect hardware. It lighting up in macOS means the hardware is fine. |
 | USB-C device lost after sleep | Known limit (see README). Unplug and replug, or reboot. |
 
