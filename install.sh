@@ -75,6 +75,10 @@ if [[ -f $MUX_SRC ]] && grep -q '5ac/8600' "$MUX_SRC"; then
     echo "# Upstream sets that device to USB config 0, which disables the Touch Bar and camera."
     sed 's/|5ac\/8600\/\*//g' "$MUX_SRC"; } >"$MUX"
   udevadm control --reload
+elif [[ -f $MUX ]] && grep -q "$MARK" "$MUX"; then
+  say "usbmuxd no longer matches 05ac:8600 (or is gone): removing our override"
+  rm -f "$MUX"
+  udevadm control --reload
 fi
 
 if [[ -f $UPOWER ]] && grep -qE '^CriticalPowerAction=(Hibernate|HybridSleep)' "$UPOWER"; then

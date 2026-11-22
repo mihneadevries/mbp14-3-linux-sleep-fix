@@ -1,6 +1,6 @@
 # Instructions for AI agents
 
-You are helping someone fix suspend/resume on a 2016-2017 T1 MacBook Pro running Linux, most likely a MacBookPro14,3 on Omarchy or Arch. Read `README.md` first. It explains each problem and fix. This file tells you how to work safely with the user.
+You are helping someone fix suspend/resume on a 2016-2017 T1 MacBook Pro running Linux, most likely a MacBookPro14,3 on Omarchy or Arch. Read `README.md` first. It explains each problem and fix. Then read `docs/lessons-learned.md`, which lists what was already tried and failed. Don't repeat those experiments. This file tells you how to work safely with the user.
 
 ## Ground rules
 
@@ -11,6 +11,12 @@ You are helping someone fix suspend/resume on a 2016-2017 T1 MacBook Pro running
 5. **Don't send raw USB/HID commands to the T1 iBridge (`05ac:8600`)**, and don't use t1bridge's FRST/recovery. Raw commands can wedge the T1 until a full shutdown, and recovery mode can leave it in recovery.
 6. **Don't unload the Touch Bar modules (`apple_ib_tb`, `apple_ibridge`) inside a sleep hook.** On a test machine, that step was followed by a suspend that never came back.
 7. Disk encryption (LUKS) means the user must type a password at every boot. Plan reboots around that.
+
+## Fresh install or full setup
+
+If the user is setting up the Mac from scratch, follow [`docs/fresh-install.md`](docs/fresh-install.md) step by step. Part A is the hardware setup, in a fixed order: the Touch Bar driver must exist before `install.sh` so it can be patched, and the T1 needs a cold boot at the end. Part B is optional personal settings. Ask the user which ones they want, one at a time, and don't apply any without asking. The Esc remap only makes sense on ISO keyboards: check that the key left of 1 types `<` before applying it. Edit the user's existing config files rather than overwriting them, and keep their other settings.
+
+If `usbmuxd` gets installed or updated later, re-run `sudo ./install.sh`.
 
 ## Install
 

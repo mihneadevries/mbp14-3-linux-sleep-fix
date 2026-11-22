@@ -6,6 +6,12 @@ Without these fixes, every sleep looks like a hard hang: the lid closes, the scr
 
 With them, lid close/open and timed sleeps resume cleanly: display, keyboard, Wi-Fi, Thunderbolt/USB-C and the Touch Bar all come back.
 
+## Docs
+
+- [`docs/fresh-install.md`](docs/fresh-install.md): the complete setup after a fresh Omarchy install, in order (Touch Bar driver, this fix, plus optional Esc remap, natural scroll, battery and backup settings).
+- [`docs/lessons-learned.md`](docs/lessons-learned.md): root causes, dead ends, traps and useful commands. Read it before experimenting.
+- [`AGENTS.md`](AGENTS.md): instructions for AI coding agents.
+
 ## Tested on
 
 | | |
