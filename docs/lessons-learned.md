@@ -13,6 +13,18 @@ A record of the debugging behind this repo (MacBookPro14,3, Omarchy, kernel 7.2.
 | 5 | **Touch Bar dark after s2idle**: `apple-ib-tb` only restores the bar in `.reset_resume`. | Log showed `Touchbar suspended.` and never `Touchbar resumed.`; `SOCW` alone didn't help. | Add `.resume = appletb_reset_resume` (driver patch). |
 | 6 | **Touch Bar idle auto-off**: after 5 minutes idle the driver turns the bar off, and on this Mac it didn't come back until a cold boot. | Went dark ~30 minutes after first working; nothing else had touched it. | `idle_timeout=-1 dim_timeout=-1`. |
 
+## A/B/A test of the Thunderbolt removal (2026-11-22)
+
+Done with [`tools/tb-abtest.sh`](../tools/tb-abtest.sh) at the omarchy#11570 reviewer's request. Each run enters s2idle directly with `pm_test=platform`. The Wi-Fi and `SOCW` steps, sleep mode (s2idle), `pm_async=0`, charger (connected), USB-C ports (empty) and hook (`8aa3b29`) were the same in every run; only the Thunderbolt removal changed.
+
+| Run | Thunderbolt removal | Result |
+|---|---|---|
+| 1 | off | Never resumed. The next boot started 3 min 44 s after the last log line; the machine reset itself. |
+| 2 | on | `state write rc=0`, **7.1 s** round trip (5 s of it is the `pm_test` delay); 37 PCI functions and 3 xHCI back. |
+| 3 | off | Never resumed. The next boot started 4 min 47 s after the last log line. |
+
+Side effect: after each forced reset, the Wi-Fi card started switched off (`brcmfmac 0000:03:00.0: enabling device`) and refused every 5 GHz join (`status_code=16`). A clean shutdown and power-on fixes it (see the mbp14-3-linux-wifi-fix repo).
+
 ## Dead ends and traps
 
 - **"It froze": often it didn't.** Thunderbolt stalls last 80-100 s. Several tests were force-killed after 30-60 s and recorded as "hang". Wait at least 3 minutes.
