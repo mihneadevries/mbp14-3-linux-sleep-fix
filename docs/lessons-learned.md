@@ -22,6 +22,7 @@ A record of the debugging behind this repo (MacBookPro14,3, Omarchy, kernel 7.2.
 - **Unloading the Touch Bar modules (`apple_ib_tb`, `apple_ib_als`) in the sleep hook:** the suspend after it never came back (the T1 was also unconfigured by usbmuxd at the time). Don't do it; let the driver's own suspend/resume run.
 - **Retiring the Touch Bar stack** (blacklisting the driver) made boot faster but wasn't needed once usbmuxd was fixed, and it left the bar dark. Reverted.
 - **"The Touch Bar hardware is dead"** was wrong. It looked dead in Linux *and* macOS for a while after experiments, and Apple Diagnostics gave `ADP000` (no issues found, but it often doesn't test the Touch Bar). A later macOS boot lit it immediately. **Test in macOS before blaming hardware.**
+- **Touch works (Esc responds) but the Touch Bar has no light, and the driver says `touch bar ready`:** the T1's display side is stuck. Seen on 2026-11-22 after several quick **warm reboots**; one of those boots even brought the T1 up in recovery mode (`05ac:1281` "Apple Mobile Device (Recovery Mode)" instead of `05ac:8600`, `apple-touchbar.service` then waits 30 s). Neither the `SOCW` off/on pair nor reloading `apple_ib_tb` helped. **A full shutdown, waiting about 30 s, then powering on fixed it.** The T1 only reloads its firmware from a cold start, so go straight to a shutdown in this state.
 - **Raw USB/HID commands to the iBridge** (a userspace "set mode/display" script) wedged the T1 until a full shutdown. Use the kernel driver.
 - **t1bridge** (custom Touch Bar graphics and Touch ID) was reviewed but never installed. It's untested on 7.2 / Omarchy, sleep/wake is broken on the 14,3, and its FRST recovery can leave the T1 in recovery mode.
 - **`ASOC.SOCW` off/on pair** (what macOS sends around sleep): harmless and kept, but on its own it did **not** relight the bar after s2idle; the driver `.resume` patch did.
@@ -50,6 +51,7 @@ journalctl -b -t mbp-sleep
 cat /sys/power/suspend_stats/{success,fail}
 
 # T1 / Touch Bar state
+cat /sys/bus/usb/devices/1-3/idProduct             # 8600 = normal, 1281 = T1 in recovery mode (do a full shutdown)
 cat /sys/bus/usb/devices/1-3/bConfigurationValue   # 1 = fine, empty = usbmuxd unconfigured it
 journalctl -b -u apple-touchbar
 dkms status
