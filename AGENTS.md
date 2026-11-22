@@ -53,6 +53,7 @@ Ask the user whether the Touch Bar is lit and whether Wi-Fi reconnected.
 |---|---|
 | Touch Bar dark after every wake | Is the driver patched? `grep '\.resume = appletb_reset_resume' /usr/src/appleibridge-*/apple-ib-tb.c`. Rebuild with DKMS, then `modprobe -r apple_ib_tb && modprobe apple_ib_tb` while awake. |
 | Touch Bar dark at boot, 30 s black screen | `cat /sys/bus/usb/devices/1-3/bConfigurationValue` is empty: the usbmuxd rule unconfigured the T1. Check `/etc/udev/rules.d/39-usbmuxd.rules` exists. |
+| Touch Bar goes dark after ~5 min idle and won't wake | The driver's idle auto-off. Set `options apple-ib-tb fnmode=1 idle_timeout=-1 dim_timeout=-1` in `/etc/modprobe.d/apple-ib-tb.conf`, then do a full shutdown (not a reboot). |
 | Touch Bar dark even in macOS | Only then suspect hardware. It lighting up in macOS means the hardware is fine. |
 | USB-C device lost after sleep | Known limit (see README). Unplug and replug, or reboot. |
 

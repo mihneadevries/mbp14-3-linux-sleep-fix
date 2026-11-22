@@ -28,6 +28,26 @@ Other 2016-2017 models (13,x / 14,1 / 14,2) share most of these problems, but th
 | **Touch Bar dark after sleep**. `apple-ib-tb` turns the bar off on suspend but only turns it back on in `.reset_resume`. s2idle resumes without a USB reset, so it stays off. | Touch Bar black after every wake. | [`patches/apple-ib-tb-s2idle-resume.patch`](patches/apple-ib-tb-s2idle-resume.patch) adds `.resume`. The hook also sends the `ASOC.SOCW` panel off/on pair macOS sends (needs `acpi_call`; see [t1bridge#68](https://github.com/standardagents/t1bridge/issues/68)). |
 | **usbmuxd** (the iPhone service) has a udev rule that matches `05ac:8600`, the T1 iBridge, and sets it to USB configuration 0 at boot. Fixed upstream in 2023 ([usbmuxd#138](https://github.com/libimobiledevice/usbmuxd/issues/138), commit `61b99ab`), but Arch's `usbmuxd 1.1.1-4` still ships the old rule. | Touch Bar and FaceTime camera disappear. A Touch Bar handover service waits 30 s at boot (black screen). | A local override of `39-usbmuxd.rules` without `05ac:8600`, in `/etc/udev/rules.d/`. iPhones still work. |
 
+## Touch Bar
+
+This repo doesn't install the Touch Bar driver. It fixes what sleep and boot do to it. For a working Touch Bar on a T1 Mac:
+
+1. **Install the driver** from [creolben/macbook-t1-touchbar](https://github.com/creolben/macbook-t1-touchbar) by [Ben Jerome (@creolben)](https://github.com/creolben). It packages the original T1 driver by [Ronald Tschalär (@roadrunner2)](https://github.com/roadrunner2/macbook12-spi-driver) with DKMS and a boot-time handover service:
+   ```bash
+   git clone https://github.com/creolben/macbook-t1-touchbar
+   cd macbook-t1-touchbar/standalone && sudo ./bootstrap-t1-touchbar.sh
+   ```
+2. **Stop the driver's idle auto-off.** By default the driver switches the bar off after 5 minutes idle. On a 14,3 it then never came back, even after a reboot, until a full shutdown. Set this in `/etc/modprobe.d/apple-ib-tb.conf`:
+   ```
+   options apple-ib-tb fnmode=1 idle_timeout=-1 dim_timeout=-1
+   ```
+   It takes effect at the next boot. The trade-off: the OLED strip never turns off, so static keys may slowly burn in.
+3. **Run this repo's `install.sh`.** It adds the s2idle resume fix to the driver (until [creolben/macbook-t1-touchbar#1](https://github.com/creolben/macbook-t1-touchbar/pull/1) is merged), the `ASOC.SOCW` panel signal around sleep, and the usbmuxd override that otherwise switches the T1 off at boot.
+
+**Is the Touch Bar hardware dead?** Probably not. Boot macOS: if the bar lights up there, or after a sleep and wake there, the hardware is fine and the problem is on the Linux side. Apple Diagnostics often doesn't test the Touch Bar at all.
+
+**Custom buttons and Touch ID:** the driver above only shows Apple's built-in layouts (Esc and media keys, or F1-F12 while holding Fn). For custom graphics and Touch ID on T1, see [standardagents/t1bridge](https://github.com/standardagents/t1bridge) (experimental). Its [issue #68](https://github.com/standardagents/t1bridge/issues/68) documents the `SOCW` sleep/wake pair used here.
+
 ## Install
 
 ```bash
@@ -93,7 +113,8 @@ This removes every file it installed, restores `UPower.conf`, and reverts the dr
 - Thunderbolt remove/rescan approach: [omacom/omarchy#11570](https://github.com/omacom/omarchy/pull/11570) and the people testing it there.
 - NVMe and amdgpu findings: [omacom/omarchy#18669](https://github.com/omacom/omarchy/issues/18669).
 - `ASOC.SOCW` sleep/wake pair: [standardagents/t1bridge#68](https://github.com/standardagents/t1bridge/issues/68).
-- T1 Touch Bar driver: Ronald Tschalär ([roadrunner2/macbook12-spi-driver](https://github.com/roadrunner2/macbook12-spi-driver)), packaged by [creolben/macbook-t1-touchbar](https://github.com/creolben/macbook-t1-touchbar).
+- T1 Touch Bar driver: [Ronald Tschalär (@roadrunner2)](https://github.com/roadrunner2) ([macbook12-spi-driver](https://github.com/roadrunner2/macbook12-spi-driver)), packaged for current kernels by [Ben Jerome (@creolben)](https://github.com/creolben) ([macbook-t1-touchbar](https://github.com/creolben/macbook-t1-touchbar)).
+- T1 research, custom Touch Bar and Touch ID: [standardagents/t1bridge](https://github.com/standardagents/t1bridge).
 
 ## License
 
