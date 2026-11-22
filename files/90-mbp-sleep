@@ -1,0 +1,57 @@
+#!/bin/bash
+# systemd-sleep hook for 2016-2017 T1 MacBook Pros (tested on MacBookPro14,3).
+# $1 = pre|post, $2 = suspend|hibernate|suspend-then-hibernate|hybrid-sleep
+#
+#  - Thunderbolt: Apple firmware cuts power to the Alpine Ridge controllers
+#    during sleep. The dead bridges stall the kernel's noirq suspend/resume
+#    for 80-100 s, which looks like a hard hang. Remove the Thunderbolt
+#    upstream ports before sleep and rescan their root ports after.
+#    Based on omacom/omarchy#11570, which only does this for S3; on the 14,3
+#    the same stall happens in s2idle.
+#  - Wi-Fi (BCM43602, brcmfmac): unload the driver around sleep, keep the
+#    card out of D3cold and disable its root port's wake.
+#  - Touch Bar (T1): send the ASOC.SOCW panel off/on pair that macOS sends
+#    around sleep (standardagents/t1bridge#68). Needs acpi_call; skipped
+#    without it.
+S=/run/mbp-sleep-hook
+log() { echo "mbp-sleep: $*" | systemd-cat -t mbp-sleep; }
+SOCW='\_SB.PCI0.XHC1.RHUB.ASOC.SOCW'
+socw() {
+  [[ -e /sys/bus/acpi/devices/APP7777:00 ]] || return 0
+  modprobe acpi_call 2>/dev/null; [[ -w /proc/acpi/call ]] || return 0
+  echo "$SOCW $1" >/proc/acpi/call
+  log "SOCW $1 -> $(tr -d '\0' </proc/acpi/call)"
+}
+case $1 in
+  pre)
+    mkdir -p $S; : >$S/rootports
+    socw 0x0
+    for nhi in /sys/bus/pci/drivers/thunderbolt/0000:*; do
+      [[ -e $nhi ]] || continue
+      n=$(readlink -f "$nhi"); up=$(dirname "$(dirname "$n")"); root=$(dirname "$up")
+      basename "$root" >>$S/rootports
+      echo disabled >"$root/power/wakeup" 2>/dev/null
+      log "pre $2: removing thunderbolt $(basename "$up") (root $(basename "$root"))"
+      echo 1 >"$up/remove"
+    done
+    wifi=$(readlink -f /sys/bus/pci/drivers/brcmfmac/0000:* 2>/dev/null | head -1)
+    if [[ -n $wifi ]]; then
+      echo 0 >"$wifi/d3cold_allowed"
+      echo disabled >"$(dirname "$wifi")/power/wakeup" 2>/dev/null
+      log "pre $2: unloading brcmfmac"
+      timeout 15 modprobe -r brcmfmac_wcc brcmfmac || log "brcmfmac unload failed"
+      : >$S/wifi
+    fi
+    log "pre $2: done"
+    ;;
+  post)
+    log "post $2: rescanning $(sort -u $S/rootports 2>/dev/null | tr '\n' ' ')"
+    for r in $(sort -u $S/rootports 2>/dev/null); do
+      echo 1 >"/sys/bus/pci/devices/$r/rescan"
+    done
+    if [[ -e $S/wifi ]]; then modprobe brcmfmac || log "brcmfmac reload failed"; rm -f $S/wifi; fi
+    socw 0x1
+    log "post $2: done ($(ls /sys/bus/pci/drivers/xhci_hcd 2>/dev/null | grep -c 0000) xhci controllers)"
+    ;;
+esac
+exit 0

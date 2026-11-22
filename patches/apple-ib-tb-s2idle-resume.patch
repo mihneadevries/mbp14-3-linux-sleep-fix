@@ -1,0 +1,18 @@
+apple-ib-tb: restore the Touch Bar on plain resume, not only reset_resume
+
+appletb_suspend() turns the Touch Bar's mode and display off. The driver only
+restores them in .reset_resume, which runs when USB resets the device (S3).
+After s2idle the device resumes without a reset, the HID core calls .resume,
+which is unset, so the Touch Bar stays dark until the module is reloaded.
+Use the same restore function for .resume.
+
+--- a/apple-ib-tb.c
++++ b/apple-ib-tb.c
+@@ -1231,6 +1231,7 @@
+ 	.input_configured = appletb_input_configured,
+ #ifdef CONFIG_PM
+ 	.suspend = appletb_suspend,
++	.resume = appletb_reset_resume,
+ 	.reset_resume = appletb_reset_resume,
+ #endif
+ };

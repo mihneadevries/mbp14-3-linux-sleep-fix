@@ -1,0 +1,4 @@
+# The Samsung SM961/PM961 NVMe in 2016-2017 MacBook Pros fails to come back
+# from D3cold after sleep. Match NVMe controllers by PCI class (0x010802)
+# rather than by slot: on 15-inch models 01:00.0 is the Radeon, not the SSD.
+ACTION=="add|bind", SUBSYSTEM=="pci", ATTR{class}=="0x010802", ATTR{d3cold_allowed}="0"
